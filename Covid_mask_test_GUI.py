@@ -3,6 +3,7 @@
 
 import numpy as np
 from keras.preprocessing import image
+from pandas import notnull
 import tensorflow as tf
 from keras.models import load_model
 import cv2 
@@ -15,14 +16,13 @@ from PIL import ImageTk, Image
 import os
 
 
-def donothing():
-   x = 0
+model_for_loading = 'myModel_saved.h5'
 
 def about_menu():
     hide_all_frames()
     about_frame.grid(row=0, column=0)
     my_label = tk.Label(about_frame, 
-        text='This application uses ResNet50 model to predict if person on picture is wearing a mask or not.',
+        text='This application uses various model to predict if person on picture is wearing a mask or not.',
         wraplength=300,
         justify="left")
     my_label.grid(row =0, column=0)
@@ -48,6 +48,17 @@ def cretor_menu():
 
 def settings_menu():
     hide_all_frames()
+
+    def select_model():
+
+        file = askopenfile( mode = 'rb', title='Choose a file', filetypes=[("h5 Files", "*.h5")])
+        global model_for_loading
+        model_for_loading = os.path.abspath(file.name)
+        #model_for_loading = file
+        text_box.delete(1.0, tk.END)
+        text_box.insert(tk.END, model_for_loading)
+        
+
     settings_frame.grid(row=0, column=0)
     ttk.Label(settings_frame, text="Settings", justify="left", anchor='nw').grid(sticky='nw', row=0, column=0 )
 
@@ -59,8 +70,9 @@ def settings_menu():
     text_box.insert(tk.END, model_for_loading)
     button = tk.Button(master=settings_frame, text='Select Model', command=select_model)
     button.grid(row=3, column=0)
-    text_box.delete(1.0,tk.END)
-    text_box.insert(tk.END, model_for_loading)
+
+
+
 
 def open_image_menu():
     hide_all_frames()
@@ -81,10 +93,12 @@ def open_image_menu():
     my_image_label = tk.Label(open_image_frame,image=my_image)
     my_image_label.grid(column=0, row=1)
     def call_back():
-        output_class = function_predict(my_image_location)
-        return output_class
+        output_class,score = function_predict(my_image_location)
+        path, filename = os.path.split(model_for_loading)
+        return_text = "Predicted class is: " + str(output_class) + "\nPrediction score is: " + str(score) + "\nPrediction model: " + str(filename)
+        return return_text
 
-    tk.Label(open_image_frame, text=call_back(), justify="left", anchor='nw').grid(sticky='nw', row=3, column=0)
+    tk.Label(open_image_frame, text=call_back(), justify="left", anchor='nw').grid(sticky='nw', row=3, column=0 , columnspan=3)
 
         
 def hide_all_frames():
@@ -96,10 +110,7 @@ def hide_all_frames():
     open_image_frame.grid_forget()
 
 
-def select_model():
 
-    file = askopenfile( mode = 'rb', title='Choose a file', filetypes=[("h5 Files", "*.h5")])
-    model_for_loading = file
 
 window = tk.Tk()
 
@@ -112,8 +123,8 @@ window.geometry('300x300')
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
 filemenu.add_command(label="Open Image", command= open_image_menu)
-filemenu.add_command(label="Open Folder", command=donothing)
-filemenu.add_command(label="Save", command=donothing)
+#filemenu.add_command(label="Open Folder", command=donothing)
+#filemenu.add_command(label="Save", command=donothing)
 filemenu.add_separator()
 filemenu.add_command(label="Exit", command=window.quit)
 menubar.add_cascade(label="File", menu=filemenu)
@@ -137,9 +148,9 @@ settings_frame = tk.Frame(window, width=300, height=300)
 open_image_frame = tk.Frame(window, width=300, height=300)
 
 
-model_for_loading = 'myModel_saved.h5'
-
 def function_predict(argImage):
+
+    #model_for_loading ='myModel_saved.h5'
     resnet_model = load_model(model_for_loading)
 
     img_height, img_width = 180, 180
@@ -161,10 +172,10 @@ def function_predict(argImage):
 
     score = predictions[0]
 
-    print(score)
+    score = max(score)
     
     output_class=class_names[np.argmax(predictions)]
     print("The predicted class is", output_class)
-    return output_class
+    return output_class, score
 
 window.mainloop()
